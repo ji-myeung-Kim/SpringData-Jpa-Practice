@@ -6,9 +6,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.annotation.Rollback;
 import org.springframework.transaction.annotation.Transactional;
+import study.datajpa.dto.MemberDto;
 import study.datajpa.entity.Member;
+import study.datajpa.entity.Team;
 
+import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.junit.jupiter.api.Assertions.*;
@@ -19,6 +23,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class MemberRepositoryTest {
 
     @Autowired MemberRepository memberRepository;
+    @Autowired TeamRepository teamRepository;
 
     @Test
     public void testMember() {
@@ -73,5 +78,103 @@ class MemberRepositoryTest {
         assertThat(result.get(0).getAge()).isEqualTo(20);
         assertThat(result.size()).isEqualTo(1);
 
+    }
+
+    @Test
+    public void testNamedQuery() {
+
+        Member m1 = new Member("aaa", 10);
+        Member m2 = new Member("bbb", 20);
+
+        memberRepository.save(m1);
+        memberRepository.save(m2);
+
+        List<Member> result = memberRepository.findByUsername("aaa");
+        Member findMember = result.get(0);
+        assertThat(findMember).isEqualTo(m1);
+    }
+
+    @Test
+    public void testQuery() {
+
+        Member m1 = new Member("aaa", 10);
+        Member m2 = new Member("bbb", 20);
+
+        memberRepository.save(m1);
+        memberRepository.save(m2);
+
+
+        List<Member> result = memberRepository.findUser("aaa", 10);
+
+        assertThat(result.get(0)).isEqualTo(m1);
+    }
+
+    @Test
+    public void findUsernameList() {
+
+        Member m1 = new Member("aaa", 10);
+        Member m2 = new Member("bbb", 20);
+
+        memberRepository.save(m1);
+        memberRepository.save(m2);
+
+        List<String> usernameList = memberRepository.findUsernameList();
+        for (String s : usernameList) {
+            System.out.println("s= " + s);
+
+        }
+    }
+
+    @Test
+    public void findMemberDto() {
+
+        Team team = new Team("teamA");
+        teamRepository.save(team);
+
+        Member m1 = new Member("aaa", 10);
+        m1.setTeam(team);
+        memberRepository.save(m1);
+
+        List<MemberDto> memberDto = memberRepository.findMemberDto();
+        for (MemberDto dto : memberDto) {
+            System.out.println("s= " + dto);
+
+        }
+    }
+
+    @Test
+    public void findByNames() {
+
+        Member m1 = new Member("aaa", 10);
+        Member m2 = new Member("bbb", 20);
+
+        memberRepository.save(m1);
+        memberRepository.save(m2);
+
+        List<Member> result = memberRepository.findByNames(Arrays.asList("aaa","bbb"));
+        for (Member member : result) {
+            System.out.println("result= " + member);
+        }
+    }
+
+    @Test
+    public void returnType() {
+
+        Member m1 = new Member("aaa", 10);
+        Member m2 = new Member("bbb", 20);
+
+        memberRepository.save(m1);
+        memberRepository.save(m2);
+
+        /**
+         * 단건인 경우 = null ----> try catch알아서 해서 null로처리
+         * 리스트로 찾는데 없을 경우 = 0
+         * optional인데 결과값이 2개인 경우 Incorrect~~~ 예외터짐
+         * NonUniqueResultException이 터져!!~~(jpa) -> 스프링프레임워크 exception(IncorrectResultsizeDataAccessException)
+         */
+//        Member findMember = memberRepository.findMemberByUsername("aaa");
+//        System.out.println("findMember =" + findMember);
+        Optional<Member> findMember = memberRepository.findOptionalByUsername("dadf");
+        System.out.println("findMember =" + findMember);
     }
 }
