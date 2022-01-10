@@ -1,9 +1,12 @@
 package study.datajpa.repository;
 
-import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Slice;
+import org.springframework.data.domain.Sort;
 import org.springframework.test.annotation.Rollback;
 import org.springframework.transaction.annotation.Transactional;
 import study.datajpa.dto.MemberDto;
@@ -15,7 +18,6 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.*;
-import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest
 @Transactional
@@ -128,18 +130,40 @@ class MemberRepositoryTest {
     @Test
     public void findMemberDto() {
 
-        Team team = new Team("teamA");
-        teamRepository.save(team);
+        Team team1 = new Team("teamA");
+        teamRepository.save(team1);
+
+        Team team2 = new Team("teamB");
+        teamRepository.save(team2);
 
         Member m1 = new Member("aaa", 10);
-        m1.setTeam(team);
+        m1.setTeam(team1);
         memberRepository.save(m1);
+
+        Member m2 = new Member("bbb", 12);
+        m2.setTeam(team1);
+        memberRepository.save(m2);
+
+        Member m3 = new Member("ccc", 14);
+        m3.setTeam(team2);
+        memberRepository.save(m3);
+
+        Member m4 = new Member("ddd", 16);
+        m4.setTeam(team2);
+        memberRepository.save(m4);
 
         List<MemberDto> memberDto = memberRepository.findMemberDto();
         for (MemberDto dto : memberDto) {
             System.out.println("s= " + dto);
 
         }
+
+        List<MemberDto> memberDto2 = memberRepository.findMemberDto2(team2.getName());
+        for (MemberDto dto : memberDto2) {
+            System.out.println("s= " + dto);
+
+        }
+
     }
 
     @Test
@@ -158,7 +182,7 @@ class MemberRepositoryTest {
     }
 
     @Test
-    public void returnType() {
+    public void returnType() throws NotFoundException {
 
         Member m1 = new Member("aaa", 10);
         Member m2 = new Member("bbb", 20);
@@ -175,6 +199,58 @@ class MemberRepositoryTest {
 //        Member findMember = memberRepository.findMemberByUsername("aaa");
 //        System.out.println("findMember =" + findMember);
         Optional<Member> findMember = memberRepository.findOptionalByUsername("dadf");
+
         System.out.println("findMember =" + findMember);
     }
+
+    public static class NotFoundException extends Throwable{
+        public NotFoundException(String s) {
+
+        }
+    }
+
+    @Test
+    public void paging() {
+        memberRepository.save(new Member("member1", 10));
+        memberRepository.save(new Member("member2", 10));
+        memberRepository.save(new Member("member3", 10));
+        memberRepository.save(new Member("member4", 10));
+        memberRepository.save(new Member("member5", 10));
+
+        int age = 10;
+        //0번째에서 3개 가져와
+        PageRequest pageRequest = PageRequest.of(0, 3, Sort.by(Sort.Direction.DESC, "username"));
+
+        //when
+        /**
+         * 여기서도 entity절대 안돼 dto로 변화!!
+         */
+        Page<Member> page = memberRepository.findByAge(age, pageRequest);
+
+        Page<MemberDto> toMap = page.map(member -> new MemberDto(member.getId(), member.getUsername(), null));
+        System.out.println("toMap = " + toMap.getContent());
+        /**        더보기 식으로 paging 효과줄 때 하나 더가져와서 눈속임 효과 적용
+        total count가 안 날라감**/
+//        Slice<Member> page = memberRepository.findByAge(age, pageRequest);
+        /**
+         * List로도 가져올 수 있음
+         */
+//        List<Member> page = memberRepository.findByAge(age, pageRequest);
+//
+//        for (Member member : page) {
+//            System.out.println("member = " + member);
+//
+//        }
+
+        //then
+        List<Member> content = page.getContent();
+        long totalElements = page.getTotalElements();
+
+        assertThat(content.size()).isEqualTo(3);
+        assertThat(page.getTotalElements()).isEqualTo(5);
+        assertThat(page.getNumber()).isEqualTo(0);
+        assertThat(page.getTotalPages()).isEqualTo(2);
+        assertThat(page.isFirst()).isTrue();
+        assertThat(page.hasNext()).isTrue();
+        }
 }
